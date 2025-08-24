@@ -57,8 +57,8 @@ fi
 
 echo ""
 echo "🎯 Starting the server..."
-echo "📱 Backend will be available at: http://localhost:5000"
-echo "🔍 Health check: http://localhost:5000/api/health"
+echo "📱 Backend will be available at: http://localhost:5001"
+echo "🔍 Health check: http://localhost:5001/api/health"
 echo "📚 API documentation: Check README.md"
 echo ""
 echo "Press Ctrl+C to stop the server."

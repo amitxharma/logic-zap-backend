@@ -33,8 +33,19 @@ const userSchema = new mongoose.Schema(
     },
     experienceLevel: {
       type: String,
-      enum: ["entry-level", "intermediate", "advanced"],
-      default: null,
+      default: undefined,
+      required: false,
+      validate: {
+        validator: function (value) {
+          // Allow null/undefined values or valid enum values
+          if (value === null || value === undefined || value === "") {
+            return true;
+          }
+          return ["entry-level", "intermediate", "advanced"].includes(value);
+        },
+        message:
+          "Experience level must be entry-level, intermediate, or advanced",
+      },
     },
     resumes: [
       {

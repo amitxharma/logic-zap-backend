@@ -20,9 +20,6 @@ const validateSignup = [
   body("password")
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters long"),
-  body("experienceLevel")
-    .optional()
-    .isIn(["entry-level", "intermediate", "advanced"]),
 ];
 
 const validateLogin = [
@@ -43,7 +40,7 @@ router.post("/signup", validateSignup, async (req, res) => {
       });
     }
 
-    const { email, password, experienceLevel } = req.body;
+    const { email, password } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -58,7 +55,7 @@ router.post("/signup", validateSignup, async (req, res) => {
     const user = new User({
       email,
       password, // This will be hashed by the virtual setter
-      experienceLevel,
+      // experienceLevel will be null by default
     });
 
     await user.save();
@@ -157,32 +154,53 @@ router.post("/login", validateLogin, async (req, res) => {
 });
 
 // Google OAuth routes
-router.get("/google", passport.authenticate("google", { session: false }));
+router.get(
+  "/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+  })
+);
 
 router.get(
   "/google/callback",
   passport.authenticate("google", {
     session: false,
-    failureRedirect: "/login",
+    failureRedirect: `${
+      process.env.FRONTEND_URL || "http://localhost:3000"
+    }/auth/callback?error=google_auth_failed`,
   }),
   async (req, res) => {
     try {
       const user = req.user;
+      console.log("Google callback successful for user:", user.email);
+
+      if (!user) {
+        console.error("No user found in Google callback");
+        return res.redirect(
+          `${
+            process.env.FRONTEND_URL || "http://localhost:3000"
+          }/auth/callback?error=no_user_found`
+        );
+      }
 
       // Generate token
       const token = generateToken(user._id);
+      console.log("Generated JWT token for user:", user.email);
 
       // Redirect to frontend with token
       const redirectUrl = `${
         process.env.FRONTEND_URL || "http://localhost:3000"
       }/auth/callback?token=${token}`;
+
+      console.log("Redirecting to:", redirectUrl);
       res.redirect(redirectUrl);
     } catch (error) {
       console.error("Google callback error:", error);
       res.redirect(
         `${
           process.env.FRONTEND_URL || "http://localhost:3000"
-        }/login?error=google_auth_failed`
+        }/auth/callback?error=callback_processing_failed`
       );
     }
   }

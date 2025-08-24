@@ -1,9 +1,11 @@
+require("dotenv").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-require("dotenv").config();
+const passport = require("./config/passport");
 
 const authRoutes = require("./routes/auth");
 const resumeRoutes = require("./routes/resume");
@@ -35,6 +37,9 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Initialize Passport
+app.use(passport.initialize());
+
 // Database connection
 mongoose
   .connect(process.env.MONGODB_URI || process.env.MONGODB_URI_ATLAS, {
@@ -59,6 +64,21 @@ app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "OK",
     message: "Resume Builder Backend is running",
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    cors: {
+      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      credentials: true,
+    },
+  });
+});
+
+// Test CORS endpoint
+app.get("/api/test-cors", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "CORS is working",
+    origin: req.headers.origin,
     timestamp: new Date().toISOString(),
   });
 });
@@ -87,4 +107,15 @@ app.use("*", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(
+    `JWT_SECRET: ${process.env.JWT_SECRET ? "✅ Loaded" : "❌ Missing"}`
+  );
+  console.log(
+    `GOOGLE_CLIENT_ID: ${
+      process.env.GOOGLE_CLIENT_ID ? "✅ Loaded" : "❌ Missing"
+    }`
+  );
+  console.log(
+    `MONGODB_URI: ${process.env.MONGODB_URI ? "✅ Loaded" : "❌ Missing"}`
+  );
 });

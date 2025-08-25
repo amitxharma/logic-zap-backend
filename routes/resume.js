@@ -279,15 +279,22 @@ router.get("/:id/download", auth, async (req, res) => {
     // Generate PDF
     const pdfBuffer = await generatePDF(resume);
 
+    // Ensure pdfBuffer is a proper Buffer
+    const buffer = Buffer.isBuffer(pdfBuffer)
+      ? pdfBuffer
+      : Buffer.from(pdfBuffer);
+
     // Set response headers for file download
     res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Cache-Control", "no-cache");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${resume.name.replace(/\s+/g, "_")}.pdf"`
     );
-    res.setHeader("Content-Length", pdfBuffer.length);
+    res.setHeader("Content-Length", buffer.length);
 
-    res.send(pdfBuffer);
+    // Send the PDF buffer properly
+    res.end(buffer);
   } catch (error) {
     console.error("Download resume error:", error);
     res.status(500).json({

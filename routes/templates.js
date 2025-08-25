@@ -71,6 +71,22 @@ const resumeTemplates = [
     suitableFor: ["intermediate", "advanced"],
     colorScheme: "academic-brown",
   },
+  {
+    id: "new-resume-template",
+    name: "Clean Professional",
+    description:
+      "Simple and clean professional resume template with clear sections",
+    category: "professional",
+    previewUrl: "/templates/new-resume-preview.png",
+    features: [
+      "Clean layout",
+      "Professional design",
+      "Print-ready",
+      "Clear sections",
+    ],
+    suitableFor: ["entry-level", "intermediate", "advanced"],
+    colorScheme: "neutral-gray",
+  },
 ];
 
 // Get all templates

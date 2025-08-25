@@ -3,6 +3,11 @@ const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 // Generate PDF resume from resume data
 const generatePDF = async (resume) => {
   try {
+    // Validate input
+    if (!resume) {
+      throw new Error("Resume data is required");
+    }
+
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
 
@@ -469,12 +474,17 @@ const generatePDF = async (resume) => {
       color: rgb(0.6, 0.6, 0.6),
     });
 
-    // Serialize the PDF to bytes
-    const pdfBytes = await pdfDoc.save();
-    return pdfBytes;
+    // Serialize the PDF to bytes with proper options
+    const pdfBytes = await pdfDoc.save({
+      useObjectStreams: false,
+      addDefaultPage: false,
+    });
+
+    // Ensure we return a proper Buffer
+    return Buffer.from(pdfBytes);
   } catch (error) {
     console.error("PDF generation error:", error);
-    throw new Error("Failed to generate PDF");
+    throw new Error(`Failed to generate PDF: ${error.message}`);
   }
 };
 

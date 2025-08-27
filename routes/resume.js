@@ -15,6 +15,10 @@ const validateResume = [
   body("contact.phone").optional().isString(),
   body("contact.address").optional().isObject(),
   body("education").isArray().withMessage("Education must be an array"),
+  body("education.*.gpa")
+    .optional()
+    .isFloat({ min: 0, max: 4.0 })
+    .withMessage("GPA must be a number between 0.0 and 4.0"),
   body("skills").isArray().withMessage("Skills must be an array"),
   body("experience").isArray().withMessage("Experience must be an array"),
 ];

@@ -61,6 +61,14 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    resetPasswordToken: {
+      type: String,
+      default: undefined,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
@@ -97,6 +105,31 @@ userSchema.pre("save", function (next) {
   }
   next();
 });
+
+// Method to generate password reset token
+userSchema.methods.generatePasswordResetToken = function () {
+  const crypto = require("crypto");
+
+  // Generate random token
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  // Hash token and set to resetPasswordToken field
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // Set expire time (10 minutes)
+  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
+};
+
+// Method to clear password reset fields
+userSchema.methods.clearPasswordReset = function () {
+  this.resetPasswordToken = undefined;
+  this.resetPasswordExpires = undefined;
+};
 
 // Method to get public profile (without sensitive data)
 userSchema.methods.getPublicProfile = function () {

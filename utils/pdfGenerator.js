@@ -1,6 +1,58 @@
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 
-// Generate PDF resume from resume data
+// Transform backend resume data to match frontend template structure
+const transformResumeData = (resume) => {
+  const fullName = resume.contact?.name || resume.name || "Jane Doe";
+  
+  return {
+    name: fullName,
+    phone: resume.contact?.phone || "+234 (0) 8123456789",
+    email: resume.contact?.email || "johndoe@gmail.com",
+    address: resume.contact?.address?.street || 
+             resume.contact?.address?.city || 
+             "NG 112 oreville",
+    bio: resume.summary || 
+         "Explain briefly who you are and your background here in not more than 3 lines. Lorem ipsum dolor sit amet, consectetur adipiscing elit ut aliquam.",
+    technicalSkills: resume.skills || [
+      "Javascript", "Python", "PHP", "UX Designer", "Sql", "Java", "HTML5", "Ruby"
+    ],
+    education: resume.education && resume.education.length > 0 ? {
+      degree: resume.education[0].degree || "B.Sc in Computer Science",
+      school: resume.education[0].institution || "National Open University of Nigeria",
+      period: resume.education[0].startDate ? 
+        `${new Date(resume.education[0].startDate).getFullYear()} – ${resume.education[0].endDate ? new Date(resume.education[0].endDate).getFullYear() : 'Present'}` :
+        "2015 – 2019"
+    } : {
+      degree: "B.Sc in Computer Science",
+      school: "National Open University of Nigeria",
+      period: "2015 – 2019"
+    },
+    certifications: resume.certifications?.map(cert => cert.name) || ["Product Design"],
+    workHistory: resume.experience?.map(exp => ({
+      title: exp.position || "Cloud Engineer",
+      company: exp.company || "Yep!, USA",
+      period: `${exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'March 2022'} – ${exp.current ? 'Present' : (exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present')}`,
+      description: exp.description ? [exp.description] : [
+        "I am a professional with passion for creating stunning and user-friendly websites and applications.",
+        "I have honed skills in various technologies and frameworks.",
+        "I am responsible for development and maintenance of several high-traffic websites.",
+        "I turn complex design concepts into highly optimized and accessible user interfaces."
+      ]
+    })) || [{
+      title: "Cloud Engineer",
+      company: "Yep!, USA",
+      period: "March 2022 – Present",
+      description: [
+        "I am a professional with passion for creating stunning and user-friendly websites and applications.",
+        "I have honed skills in various technologies and frameworks.",
+        "I am responsible for development and maintenance of several high-traffic websites.",
+        "I turn complex design concepts into highly optimized and accessible user interfaces."
+      ]
+    }]
+  };
+};
+
+// Generate PDF resume from resume data (matching KateBishopResume template)
 const generatePDF = async (resume) => {
   try {
     // Validate input
@@ -8,19 +60,22 @@ const generatePDF = async (resume) => {
       throw new Error("Resume data is required");
     }
 
+    // Transform data to match template structure
+    const data = transformResumeData(resume);
+
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
 
-    // Add a page
-    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
+    // Add a page (A4 size)
+    const page = pdfDoc.addPage([595.28, 841.89]);
     const { width, height } = page.getSize();
 
     // Get fonts
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // Set margins
-    const margin = 50;
+    // Set margins and layout
+    const margin = 40;
     const contentWidth = width - 2 * margin;
     let currentY = height - margin;
 
@@ -34,6 +89,8 @@ const generatePDF = async (resume) => {
       fontFamily,
       color = rgb(0, 0, 0)
     ) => {
+      if (!text) return y;
+      
       const words = text.split(" ");
       let line = "";
       let lineY = y;
@@ -51,7 +108,7 @@ const generatePDF = async (resume) => {
             color,
           });
           line = words[i] + " ";
-          lineY -= fontSize + 2;
+          lineY -= fontSize + 4;
         } else {
           line = testLine;
         }
@@ -65,410 +122,277 @@ const generatePDF = async (resume) => {
           font: fontFamily,
           color,
         });
-        lineY -= fontSize + 2;
+        lineY -= fontSize + 4;
       }
 
       return lineY;
     };
 
-    // Helper function to add section header
-    const addSectionHeader = (text, y) => {
-      page.drawText(text, {
-        x: margin,
-        y,
-        size: 16,
-        font: boldFont,
-        color: rgb(0.2, 0.2, 0.6),
-      });
-      return y - 25;
-    };
-
-    // Helper function to add subsection
-    const addSubsection = (title, content, y) => {
-      // Subsection title
-      page.drawText(title, {
-        x: margin,
-        y,
-        size: 12,
-        font: boldFont,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-
-      let currentY = y - 18;
-
-      // Subsection content
-      if (Array.isArray(content)) {
-        content.forEach((item) => {
-          if (typeof item === "string") {
-            currentY = addWrappedText(
-              `• ${item}`,
-              margin + 20,
-              currentY,
-              contentWidth - 20,
-              10,
-              font
-            );
-          } else if (typeof item === "object") {
-            // Handle complex objects (education, experience, etc.)
-            Object.entries(item).forEach(([key, value]) => {
-              if (value && value.toString().trim()) {
-                const displayKey =
-                  key.charAt(0).toUpperCase() +
-                  key.slice(1).replace(/([A-Z])/g, " $1");
-                const displayValue = value.toString();
-                currentY = addWrappedText(
-                  `${displayKey}: ${displayValue}`,
-                  margin + 20,
-                  currentY,
-                  contentWidth - 20,
-                  10,
-                  font
-                );
-              }
-            });
-          }
-          currentY -= 5;
-        });
-      } else if (typeof content === "string") {
-        currentY = addWrappedText(
-          content,
-          margin + 20,
-          currentY,
-          contentWidth - 20,
-          10,
-          font
-        );
-      }
-
-      return currentY - 10;
-    };
-
-    // Header section
-    const headerY = currentY;
-    page.drawText(resume.name || "Resume", {
+    // Draw border
+    page.drawRectangle({
       x: margin,
+      y: margin,
+      width: contentWidth,
+      height: height - 2 * margin,
+      borderColor: rgb(0.9, 0.9, 0.9),
+      borderWidth: 1,
+    });
+
+    // Header section with profile placeholder and name
+    const headerY = currentY - 30;
+    
+    // Profile circle placeholder (emoji-like)
+    page.drawCircle({
+      x: margin + 50,
+      y: headerY - 10,
+      size: 25,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+    
+    // Add "USER" text in the circle
+    page.drawText("USER", {
+      x: margin + 35,
+      y: headerY - 18,
+      size: 8,
+      font: boldFont,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+
+    // Name
+    page.drawText(data.name, {
+      x: margin + 90,
       y: headerY,
-      size: 24,
+      size: 18,
       font: boldFont,
       color: rgb(0.1, 0.1, 0.1),
     });
 
-    currentY = headerY - 30;
+    // Contact info
+    const contactText = `${data.phone} || ${data.email}`;
+    page.drawText(contactText, {
+      x: margin + 90,
+      y: headerY - 20,
+      size: 10,
+      font: font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
 
-    // Contact information
-    if (resume.contact) {
-      const contactInfo = [];
-      if (resume.contact.phone) contactInfo.push(resume.contact.phone);
-      if (resume.contact.address) {
-        const address = resume.contact.address;
-        const addressParts = [
-          address.street,
-          address.city,
-          address.state,
-          address.zipCode,
-          address.country,
-        ].filter(Boolean);
-        if (addressParts.length > 0) contactInfo.push(addressParts.join(", "));
-      }
-      if (resume.contact.linkedin) contactInfo.push(resume.contact.linkedin);
-      if (resume.contact.website) contactInfo.push(resume.contact.website);
+    // Draw header border
+    page.drawLine({
+      start: { x: margin, y: headerY - 40 },
+      end: { x: margin + contentWidth, y: headerY - 40 },
+      thickness: 1,
+      color: rgb(0.9, 0.9, 0.9),
+    });
 
-      if (contactInfo.length > 0) {
-        const contactText = contactInfo.join(" | ");
-        currentY = addWrappedText(
-          contactText,
-          margin,
-          currentY,
-          contentWidth,
+    currentY = headerY - 60;
+
+    // Address and Bio section (two columns)
+    const leftColX = margin + 20;
+    const rightColX = margin + contentWidth / 2 + 10;
+    const colWidth = contentWidth / 2 - 30;
+
+    // Address
+    page.drawText("Address", {
+      x: leftColX,
+      y: currentY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    
+    currentY = addWrappedText(
+      data.address,
+      leftColX,
+      currentY - 15,
+      colWidth,
+      10,
+      font,
+      rgb(0.4, 0.4, 0.4)
+    );
+
+    // Bio (right column)
+    page.drawText("Bio", {
+      x: rightColX,
+      y: currentY + 30, // Align with Address header
+      size: 12,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    
+    addWrappedText(
+      data.bio,
+      rightColX,
+      currentY + 15,
+      colWidth,
+      10,
+      font,
+      rgb(0.4, 0.4, 0.4)
+    );
+
+    currentY -= 40;
+
+    // Main content area (two columns)
+    const leftMainY = currentY;
+    let leftCurrentY = leftMainY;
+    let rightCurrentY = leftMainY;
+
+    // Left column - Technical Skills
+    page.drawText("Technical Skills", {
+      x: leftColX,
+      y: leftCurrentY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    leftCurrentY -= 20;
+
+    // Skills in two sub-columns
+    const skillsPerCol = Math.ceil(data.technicalSkills.length / 2);
+    const leftSkillsX = leftColX;
+    const rightSkillsX = leftColX + colWidth / 2;
+    
+    for (let i = 0; i < data.technicalSkills.length; i++) {
+      const skill = data.technicalSkills[i];
+      const isLeftCol = i < skillsPerCol;
+      const x = isLeftCol ? leftSkillsX : rightSkillsX;
+      const y = leftCurrentY - (i % skillsPerCol) * 15;
+      
+      page.drawText(`• ${skill}`, {
+        x,
+        y,
+        size: 10,
+        font: font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+    }
+    
+    leftCurrentY -= (skillsPerCol * 15) + 20;
+
+    // Education
+    page.drawText("Education", {
+      x: leftColX,
+      y: leftCurrentY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    leftCurrentY -= 20;
+
+    page.drawText(data.education.degree, {
+      x: leftColX,
+      y: leftCurrentY,
+      size: 10,
+      font: boldFont,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    leftCurrentY -= 15;
+
+    page.drawText(data.education.school, {
+      x: leftColX,
+      y: leftCurrentY,
+      size: 10,
+      font: font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    leftCurrentY -= 15;
+
+    page.drawText(data.education.period, {
+      x: leftColX,
+      y: leftCurrentY,
+      size: 9,
+      font: font,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+    leftCurrentY -= 30;
+
+    // Certifications
+    if (data.certifications && data.certifications.length > 0) {
+      page.drawText("Certification", {
+        x: leftColX,
+        y: leftCurrentY,
+        size: 12,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      leftCurrentY -= 20;
+
+      data.certifications.forEach((cert) => {
+        page.drawText(`• ${cert}`, {
+          x: leftColX,
+          y: leftCurrentY,
+          size: 10,
+          font: font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        leftCurrentY -= 15;
+      });
+    }
+
+    // Right column - Work History
+    page.drawText("Work History", {
+      x: rightColX,
+      y: rightCurrentY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    rightCurrentY -= 25;
+
+    data.workHistory.forEach((job) => {
+      // Job title and company
+      const jobTitle = `${job.title} | ${job.company}`;
+      page.drawText(jobTitle, {
+        x: rightColX,
+        y: rightCurrentY,
+        size: 10,
+        font: boldFont,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      rightCurrentY -= 15;
+
+      // Period
+      page.drawText(job.period, {
+        x: rightColX,
+        y: rightCurrentY,
+        size: 9,
+        font: font,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+      rightCurrentY -= 20;
+
+      // Description
+      if (Array.isArray(job.description)) {
+        job.description.forEach((desc) => {
+          rightCurrentY = addWrappedText(
+            desc,
+            rightColX,
+            rightCurrentY,
+            colWidth,
+            10,
+            font,
+            rgb(0.3, 0.3, 0.3)
+          );
+          rightCurrentY -= 5;
+        });
+      } else {
+        rightCurrentY = addWrappedText(
+          job.description,
+          rightColX,
+          rightCurrentY,
+          colWidth,
           10,
           font,
-          rgb(0.4, 0.4, 0.4)
+          rgb(0.3, 0.3, 0.3)
         );
-        currentY -= 20;
       }
-    }
-
-    // Summary section
-    if (resume.summary) {
-      currentY = addSectionHeader("Professional Summary", currentY);
-      currentY = addWrappedText(
-        resume.summary,
-        margin,
-        currentY,
-        contentWidth,
-        11,
-        font
-      );
-      currentY -= 20;
-    }
-
-    // Skills section
-    if (resume.skills && resume.skills.length > 0) {
-      currentY = addSectionHeader("Skills", currentY);
-      const skillsText = resume.skills.join(", ");
-      currentY = addWrappedText(
-        skillsText,
-        margin,
-        currentY,
-        contentWidth,
-        11,
-        font
-      );
-      currentY -= 20;
-    }
-
-    // Experience section
-    if (resume.experience && resume.experience.length > 0) {
-      currentY = addSectionHeader("Professional Experience", currentY);
-
-      resume.experience.forEach((exp) => {
-        // Company and position
-        const companyPosition = `${exp.position} at ${exp.company}`;
-        page.drawText(companyPosition, {
-          x: margin,
-          y: currentY,
-          size: 12,
-          font: boldFont,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentY -= 18;
-
-        // Date range
-        const startDate = new Date(exp.startDate).toLocaleDateString("en-US", {
-          month: "short",
-          year: "numeric",
-        });
-        const endDate = exp.current
-          ? "Present"
-          : new Date(exp.endDate).toLocaleDateString("en-US", {
-              month: "short",
-              year: "numeric",
-            });
-        const dateRange = `${startDate} - ${endDate}`;
-
-        page.drawText(dateRange, {
-          x: margin,
-          y: currentY,
-          size: 10,
-          font: font,
-          color: rgb(0.5, 0.5, 0.5),
-        });
-        currentY -= 15;
-
-        // Description
-        currentY = addWrappedText(
-          exp.description,
-          margin,
-          currentY,
-          contentWidth,
-          10,
-          font
-        );
-        currentY -= 10;
-
-        // Achievements
-        if (exp.achievements && exp.achievements.length > 0) {
-          exp.achievements.forEach((achievement) => {
-            currentY = addWrappedText(
-              `• ${achievement}`,
-              margin + 20,
-              currentY,
-              contentWidth - 20,
-              10,
-              font
-            );
-            currentY -= 5;
-          });
-        }
-
-        currentY -= 10;
-      });
-    }
-
-    // Education section
-    if (resume.education && resume.education.length > 0) {
-      currentY = addSectionHeader("Education", currentY);
-
-      resume.education.forEach((edu) => {
-        const degreeInfo = `${edu.degree} in ${edu.field}`;
-        page.drawText(degreeInfo, {
-          x: margin,
-          y: currentY,
-          size: 12,
-          font: boldFont,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentY -= 18;
-
-        const institutionInfo = edu.institution;
-        page.drawText(institutionInfo, {
-          x: margin,
-          y: currentY,
-          size: 11,
-          font: font,
-          color: rgb(0.4, 0.4, 0.4),
-        });
-        currentY -= 15;
-
-        const startDate = new Date(edu.startDate).toLocaleDateString("en-US", {
-          month: "short",
-          year: "numeric",
-        });
-        const endDate = edu.endDate
-          ? new Date(edu.endDate).toLocaleDateString("en-US", {
-              month: "short",
-              year: "numeric",
-            })
-          : "Present";
-        const dateRange = `${startDate} - ${endDate}`;
-
-        page.drawText(dateRange, {
-          x: margin,
-          y: currentY,
-          size: 10,
-          font: font,
-          color: rgb(0.5, 0.5, 0.5),
-        });
-        currentY -= 15;
-
-        if (edu.gpa) {
-          page.drawText(`GPA: ${edu.gpa}`, {
-            x: margin,
-            y: currentY,
-            size: 10,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-          });
-          currentY -= 15;
-        }
-
-        if (edu.description) {
-          currentY = addWrappedText(
-            edu.description,
-            margin,
-            currentY,
-            contentWidth,
-            10,
-            font
-          );
-          currentY -= 10;
-        }
-
-        currentY -= 10;
-      });
-    }
-
-    // Languages section
-    if (resume.languages && resume.languages.length > 0) {
-      currentY = addSectionHeader("Languages", currentY);
-      const languagesText = resume.languages
-        .map((lang) => `${lang.name} (${lang.proficiency})`)
-        .join(", ");
-      currentY = addWrappedText(
-        languagesText,
-        margin,
-        currentY,
-        contentWidth,
-        11,
-        font
-      );
-      currentY -= 20;
-    }
-
-    // Certifications section
-    if (resume.certifications && resume.certifications.length > 0) {
-      currentY = addSectionHeader("Certifications", currentY);
-
-      resume.certifications.forEach((cert) => {
-        const certInfo = `${cert.name} - ${cert.issuer}`;
-        page.drawText(certInfo, {
-          x: margin,
-          y: currentY,
-          size: 11,
-          font: boldFont,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentY -= 15;
-
-        if (cert.date) {
-          const certDate = new Date(cert.date).toLocaleDateString("en-US", {
-            month: "short",
-            year: "numeric",
-          });
-          page.drawText(certDate, {
-            x: margin,
-            y: currentY,
-            size: 10,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-          });
-          currentY -= 15;
-        }
-
-        if (cert.description) {
-          currentY = addWrappedText(
-            cert.description,
-            margin,
-            currentY,
-            contentWidth,
-            10,
-            font
-          );
-          currentY -= 10;
-        }
-
-        currentY -= 5;
-      });
-    }
-
-    // Projects section
-    if (resume.projects && resume.projects.length > 0) {
-      currentY = addSectionHeader("Projects", currentY);
-
-      resume.projects.forEach((project) => {
-        page.drawText(project.name, {
-          x: margin,
-          y: currentY,
-          size: 12,
-          font: boldFont,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentY -= 18;
-
-        if (project.description) {
-          currentY = addWrappedText(
-            project.description,
-            margin,
-            currentY,
-            contentWidth,
-            10,
-            font
-          );
-          currentY -= 10;
-        }
-
-        if (project.technologies && project.technologies.length > 0) {
-          const techText = `Technologies: ${project.technologies.join(", ")}`;
-          currentY = addWrappedText(
-            techText,
-            margin,
-            currentY,
-            contentWidth,
-            10,
-            font
-          );
-          currentY -= 10;
-        }
-
-        currentY -= 5;
-      });
-    }
+      rightCurrentY -= 15;
+    });
 
     // Footer
-    const footerY = 30;
     page.drawText(`Generated on ${new Date().toLocaleDateString()}`, {
-      x: margin,
-      y: footerY,
+      x: margin + 20,
+      y: 40,
       size: 8,
       font: font,
       color: rgb(0.6, 0.6, 0.6),

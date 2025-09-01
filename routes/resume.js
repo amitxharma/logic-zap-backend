@@ -280,8 +280,20 @@ router.get("/:id/download", auth, async (req, res) => {
       });
     }
 
+    // Ensure contact has email from user if not present
+    const resumeData = resume.toObject();
+    if (!resumeData.contact) {
+      resumeData.contact = {};
+    }
+    if (!resumeData.contact.email && resume.userId && resume.userId.email) {
+      resumeData.contact.email = resume.userId.email;
+    }
+    if (!resumeData.contact.name && resume.userId && resume.userId.name) {
+      resumeData.contact.name = resume.userId.name;
+    }
+
     // Generate PDF
-    const pdfBuffer = await generatePDF(resume);
+    const pdfBuffer = await generatePDF(resumeData);
 
     // Ensure pdfBuffer is a proper Buffer
     const buffer = Buffer.isBuffer(pdfBuffer)

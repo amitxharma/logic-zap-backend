@@ -19,8 +19,21 @@ const validateResume = [
     .optional()
     .isFloat({ min: 0, max: 4.0 })
     .withMessage("GPA must be a number between 0.0 and 4.0"),
+  body("education.*.location").optional().isString().trim(),
+  body("education.*.major").optional().isString().trim(),
+  body("education.*.honors").optional().isString().trim(),
   body("skills").isArray().withMessage("Skills must be an array"),
   body("experience").isArray().withMessage("Experience must be an array"),
+  body("experience.*.location").optional().isString().trim(),
+  body("experience.*.employmentType")
+    .optional()
+    .isIn(['full-time', 'part-time', 'contract', 'internship', 'freelance'])
+    .withMessage("Invalid employment type"),
+  body("experience.*.projects").optional().isArray(),
+  body("experience.*.skillsUsed").optional().isArray(),
+  body("awards").optional().isArray(),
+  body("volunteer").optional().isArray(),
+  body("hobbies").optional().isArray(),
 ];
 
 // Create new resume

@@ -17,6 +17,14 @@ const educationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    location: {
+      type: String,
+      trim: true,
+    },
+    major: {
+      type: String,
+      trim: true,
+    },
     startDate: {
       type: Date,
       required: true,
@@ -30,6 +38,10 @@ const educationSchema = new mongoose.Schema(
       min: 0,
       max: 4.0,
       default: null,
+    },
+    honors: {
+      type: String,
+      trim: true,
     },
     description: {
       type: String,
@@ -52,6 +64,10 @@ const experienceSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    location: {
+      type: String,
+      trim: true,
+    },
     startDate: {
       type: Date,
       required: true,
@@ -63,6 +79,11 @@ const experienceSchema = new mongoose.Schema(
     current: {
       type: Boolean,
       default: false,
+    },
+    employmentType: {
+      type: String,
+      enum: ['full-time', 'part-time', 'contract', 'internship', 'freelance'],
+      trim: true,
     },
     description: {
       type: String,
@@ -77,6 +98,16 @@ const experienceSchema = new mongoose.Schema(
         maxlength: 200,
       },
     ],
+    projects: [{
+      type: String,
+      trim: true,
+      maxlength: 200,
+    }],
+    skillsUsed: [{
+      type: String,
+      trim: true,
+      maxlength: 50,
+    }],
   },
   { _id: true }
 );
@@ -175,6 +206,21 @@ const resumeSchema = new mongoose.Schema(
         endDate: Date,
       },
     ],
+    awards: [{
+      type: String,
+      trim: true,
+      maxlength: 200,
+    }],
+    volunteer: [{
+      type: String,
+      trim: true,
+      maxlength: 200,
+    }],
+    hobbies: [{
+      type: String,
+      trim: true,
+      maxlength: 100,
+    }],
     createdAt: {
       type: Date,
       default: Date.now,
@@ -214,6 +260,9 @@ resumeSchema.methods.getFormattedData = function () {
     languages: this.languages,
     certifications: this.certifications,
     projects: this.projects,
+    awards: this.awards,
+    volunteer: this.volunteer,
+    hobbies: this.hobbies,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
   };

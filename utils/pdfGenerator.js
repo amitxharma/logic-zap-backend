@@ -2,52 +2,71 @@ const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 
 // Transform backend resume data to match frontend template structure
 const transformResumeData = (resume) => {
-  const fullName = resume.contact?.name || resume.name || "Jane Doe";
+  const fullName = resume.personalInfo?.fullName || resume.name || "Jane Doe";
   
   return {
     name: fullName,
-    phone: resume.contact?.phone || "+234 (0) 8123456789",
-    email: resume.contact?.email || "johndoe@gmail.com",
-    address: resume.contact?.address?.street || 
-             resume.contact?.address?.city || 
-             "NG 112 oreville",
-    bio: resume.summary || 
-         "Explain briefly who you are and your background here in not more than 3 lines. Lorem ipsum dolor sit amet, consectetur adipiscing elit ut aliquam.",
-    technicalSkills: resume.skills || [
+    phone: resume.personalInfo?.phone || "+234 (0) 8123456789",
+    email: resume.personalInfo?.email || "johndoe@gmail.com",
+    address: resume.personalInfo?.address || "NG 112 oreville",
+    linkedin: resume.personalInfo?.linkedin || "",
+    website: resume.personalInfo?.website || "",
+    bio: resume.personalInfo?.profileSummary || resume.summary || "Explain briefly who you are and your background here in not more than 3 lines.",
+    technicalSkills: resume.technicalSkills ? resume.technicalSkills.split(',').map(s => s.trim()) : [
       "Javascript", "Python", "PHP", "UX Designer", "Sql", "Java", "HTML5", "Ruby"
     ],
+    softSkills: resume.softSkills ? resume.softSkills.split(',').map(s => s.trim()) : [],
     education: resume.education && resume.education.length > 0 ? {
       degree: resume.education[0].degree || "B.Sc in Computer Science",
       school: resume.education[0].institution || "National Open University of Nigeria",
-      period: resume.education[0].startDate ? 
-        `${new Date(resume.education[0].startDate).getFullYear()} – ${resume.education[0].endDate ? new Date(resume.education[0].endDate).getFullYear() : 'Present'}` :
+      location: resume.education[0].educationLocation || "",
+      major: resume.education[0].major || "",
+      honors: resume.education[0].honors || "",
+      coursework: resume.education[0].coursework || "",
+      gpa: resume.education[0].gpa || "",
+      period: resume.education[0].educationStartDate ? 
+        `${resume.education[0].educationStartDate} – ${resume.education[0].educationEndDate || 'Present'}` :
         "2015 – 2019"
     } : {
       degree: "B.Sc in Computer Science",
       school: "National Open University of Nigeria",
+      location: "",
+      major: "",
+      honors: "",
       period: "2015 – 2019"
     },
-    certifications: resume.certifications?.map(cert => cert.name) || ["Product Design"],
+    certifications: resume.certifications?.map(cert => ({
+      name: cert.certName || cert.name || "Product Design",
+      org: cert.certOrg || "",
+      date: cert.certIssueDate || "",
+      credential: cert.certCredential || ""
+    })) || [{name: "Product Design"}],
+    projects: resume.projects?.map(project => ({
+      title: project.projectTitle || "Resume Builder App",
+      description: project.projectDescription || "",
+      tech: project.projectTech || "",
+      role: project.projectRole || "",
+      link: project.projectLink || "",
+      period: `${project.projectStartDate || ""} – ${project.projectEndDate || ""}`
+    })) || [],
     workHistory: resume.experience?.map(exp => ({
-      title: exp.position || "Cloud Engineer",
-      company: exp.company || "Yep!, USA",
-      period: `${exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'March 2022'} – ${exp.current ? 'Present' : (exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present')}`,
-      description: exp.description ? [exp.description] : [
-        "I am a professional with passion for creating stunning and user-friendly websites and applications.",
-        "I have honed skills in various technologies and frameworks.",
-        "I am responsible for development and maintenance of several high-traffic websites.",
-        "I turn complex design concepts into highly optimized and accessible user interfaces."
-      ]
+      title: exp.jobTitle || exp.position || "Cloud Engineer",
+      company: exp.companyName || exp.company || "Yep!, USA",
+      location: exp.jobLocation || exp.location || "",
+      employmentType: exp.employmentType || "",
+      period: `${exp.jobStartDate || exp.startDate || 'March 2022'} – ${exp.current ? 'Present' : (exp.jobEndDate || exp.endDate || 'Present')}`,
+      description: exp.jobDescription || exp.description ? [exp.jobDescription || exp.description] : [
+        "I am a professional with passion for creating stunning and user-friendly websites and applications."
+      ],
+      skills: exp.jobSkills || exp.skillsUsed || ""
     })) || [{
       title: "Cloud Engineer",
       company: "Yep!, USA",
+      location: "",
+      employmentType: "",
       period: "March 2022 – Present",
-      description: [
-        "I am a professional with passion for creating stunning and user-friendly websites and applications.",
-        "I have honed skills in various technologies and frameworks.",
-        "I am responsible for development and maintenance of several high-traffic websites.",
-        "I turn complex design concepts into highly optimized and accessible user interfaces."
-      ]
+      description: ["I am a professional with passion for creating stunning and user-friendly websites and applications."],
+      skills: ""
     }]
   };
 };
@@ -327,6 +346,78 @@ const generatePDF = async (resume) => {
         });
         leftCurrentY -= 15;
       });
+      leftCurrentY -= 10;
+    }
+
+    // Awards
+    if (data.awards && data.awards.length > 0) {
+      page.drawText("Awards", {
+        x: leftColX,
+        y: leftCurrentY,
+        size: 12,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      leftCurrentY -= 20;
+
+      data.awards.forEach((award) => {
+        page.drawText(`• ${award}`, {
+          x: leftColX,
+          y: leftCurrentY,
+          size: 10,
+          font: font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        leftCurrentY -= 15;
+      });
+      leftCurrentY -= 10;
+    }
+
+    // Volunteer Work
+    if (data.volunteer && data.volunteer.length > 0) {
+      page.drawText("Volunteer Work", {
+        x: leftColX,
+        y: leftCurrentY,
+        size: 12,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      leftCurrentY -= 20;
+
+      data.volunteer.forEach((vol) => {
+        page.drawText(`• ${vol}`, {
+          x: leftColX,
+          y: leftCurrentY,
+          size: 10,
+          font: font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        leftCurrentY -= 15;
+      });
+      leftCurrentY -= 10;
+    }
+
+    // Hobbies
+    if (data.hobbies && data.hobbies.length > 0) {
+      page.drawText("Hobbies", {
+        x: leftColX,
+        y: leftCurrentY,
+        size: 12,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      leftCurrentY -= 20;
+
+      data.hobbies.forEach((hobby) => {
+        page.drawText(`• ${hobby}`, {
+          x: leftColX,
+          y: leftCurrentY,
+          size: 10,
+          font: font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        leftCurrentY -= 15;
+      });
     }
 
     // Right column - Work History
@@ -350,6 +441,19 @@ const generatePDF = async (resume) => {
         color: rgb(0.3, 0.3, 0.3),
       });
       rightCurrentY -= 15;
+
+      // Location and Employment Type
+      const locationAndType = [job.location, job.employmentType].filter(Boolean).join(' | ');
+      if (locationAndType) {
+        page.drawText(locationAndType, {
+          x: rightColX,
+          y: rightCurrentY,
+          size: 9,
+          font: font,
+          color: rgb(0.5, 0.5, 0.5),
+        });
+        rightCurrentY -= 12;
+      }
 
       // Period
       page.drawText(job.period, {

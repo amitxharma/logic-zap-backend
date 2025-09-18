@@ -2,45 +2,38 @@ const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 
 // Transform backend resume data to match frontend template structure
 const transformResumeData = (resume) => {
-  const fullName = resume.personalInfo?.fullName || resume.name || "Jane Doe";
+  const fullName = resume.contact?.name || resume.name || "Jane Doe";
   
   return {
     name: fullName,
-    phone: resume.personalInfo?.phone || "+234 (0) 8123456789",
-    email: resume.personalInfo?.email || "johndoe@gmail.com",
-    address: resume.personalInfo?.address || "NG 112 oreville",
-    linkedin: resume.personalInfo?.linkedin || "",
-    website: resume.personalInfo?.website || "",
-    bio: resume.personalInfo?.profileSummary || resume.summary || "Explain briefly who you are and your background here in not more than 3 lines.",
-    technicalSkills: resume.technicalSkills ? resume.technicalSkills.split(',').map(s => s.trim()) : [
-      "Javascript", "Python", "PHP", "UX Designer", "Sql", "Java", "HTML5", "Ruby"
-    ],
+    phone: resume.contact?.phone || "+234 (0) 8123456789",
+    email: resume.contact?.email || "johndoe@gmail.com",
+    address: resume.contact?.address?.street || resume.contact?.address?.city || "NG 112 oreville",
+    linkedin: resume.contact?.linkedin || "",
+    website: resume.contact?.website || "",
+    bio: resume.summary || "Professional with passion for creating stunning and user-friendly websites and applications.",
+    technicalSkills: resume.skills || ["Javascript", "Python", "PHP"],
     softSkills: resume.softSkills ? resume.softSkills.split(',').map(s => s.trim()) : [],
     education: resume.education && resume.education.length > 0 ? {
       degree: resume.education[0].degree || "B.Sc in Computer Science",
-      school: resume.education[0].institution || "National Open University of Nigeria",
-      location: resume.education[0].educationLocation || "",
-      major: resume.education[0].major || "",
-      honors: resume.education[0].honors || "",
-      coursework: resume.education[0].coursework || "",
+      school: resume.education[0].institution || "ABC University",
+      location: "",
+      major: "",
+      honors: "",
+      coursework: "",
       gpa: resume.education[0].gpa || "",
-      period: resume.education[0].educationStartDate ? 
-        `${resume.education[0].educationStartDate} – ${resume.education[0].educationEndDate || 'Present'}` :
+      period: resume.education[0].startDate ? 
+        `${new Date(resume.education[0].startDate).getFullYear()} – ${resume.education[0].endDate ? new Date(resume.education[0].endDate).getFullYear() : 'Present'}` :
         "2015 – 2019"
     } : {
       degree: "B.Sc in Computer Science",
-      school: "National Open University of Nigeria",
+      school: "ABC University",
       location: "",
       major: "",
       honors: "",
       period: "2015 – 2019"
     },
-    certifications: resume.certifications?.map(cert => ({
-      name: cert.certName || cert.name || "Product Design",
-      org: cert.certOrg || "",
-      date: cert.certIssueDate || "",
-      credential: cert.certCredential || ""
-    })) || [{name: "Product Design"}],
+    certifications: ["Product Design", "AWS Certified Solutions Architect"],
     projects: resume.projects?.map(project => ({
       title: project.projectTitle || "Resume Builder App",
       description: project.projectDescription || "",
@@ -50,22 +43,22 @@ const transformResumeData = (resume) => {
       period: `${project.projectStartDate || ""} – ${project.projectEndDate || ""}`
     })) || [],
     workHistory: resume.experience?.map(exp => ({
-      title: exp.jobTitle || exp.position || "Cloud Engineer",
-      company: exp.companyName || exp.company || "Yep!, USA",
-      location: exp.jobLocation || exp.location || "",
-      employmentType: exp.employmentType || "",
-      period: `${exp.jobStartDate || exp.startDate || 'March 2022'} – ${exp.current ? 'Present' : (exp.jobEndDate || exp.endDate || 'Present')}`,
-      description: exp.jobDescription || exp.description ? [exp.jobDescription || exp.description] : [
-        "I am a professional with passion for creating stunning and user-friendly websites and applications."
+      title: exp.position || "Cloud Engineer",
+      company: exp.company || "Yep!, USA",
+      location: "",
+      employmentType: "",
+      period: `${exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-US', {month: 'long', year: 'numeric'}) : 'March 2022'} – ${exp.current ? 'Present' : (exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', {month: 'long', year: 'numeric'}) : 'Present')}`,
+      description: exp.description ? [exp.description] : [
+        "Professional with passion for creating stunning and user-friendly websites and applications."
       ],
-      skills: exp.jobSkills || exp.skillsUsed || ""
+      skills: ""
     })) || [{
       title: "Cloud Engineer",
       company: "Yep!, USA",
       location: "",
       employmentType: "",
       period: "March 2022 – Present",
-      description: ["I am a professional with passion for creating stunning and user-friendly websites and applications."],
+      description: ["Professional with passion for creating stunning and user-friendly websites and applications."],
       skills: ""
     }]
   };

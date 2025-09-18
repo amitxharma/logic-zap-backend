@@ -92,20 +92,14 @@ const resumeTemplates = [
 // Get all templates
 router.get("/", optionalAuth, (req, res) => {
   try {
-    // Filter templates based on user's experience level if authenticated
-    let filteredTemplates = resumeTemplates;
-
-    if (req.user && req.user.experienceLevel) {
-      filteredTemplates = resumeTemplates.filter((template) =>
-        template.suitableFor.includes(req.user.experienceLevel)
-      );
-    }
+    // For now, only return the first template (Modern Professional)
+    const singleTemplate = [resumeTemplates[0]];
 
     res.json({
       success: true,
       data: {
-        templates: filteredTemplates,
-        count: filteredTemplates.length,
+        templates: singleTemplate,
+        count: singleTemplate.length,
         totalAvailable: resumeTemplates.length,
       },
     });

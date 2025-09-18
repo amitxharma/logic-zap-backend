@@ -1,137 +1,98 @@
 const mongoose = require("mongoose");
 
-const educationSchema = new mongoose.Schema(
-  {
-    institution: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    degree: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    field: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    location: {
-      type: String,
-      trim: true,
-    },
-    major: {
-      type: String,
-      trim: true,
-    },
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
-      default: null,
-    },
-    gpa: {
-      type: Number,
-      min: 0,
-      max: 4.0,
-      default: null,
-    },
-    honors: {
-      type: String,
-      trim: true,
-    },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 500,
-    },
+// Basic information schema
+const basicsSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  label: { type: String, trim: true },
+  image: { type: String, trim: true },
+  email: { type: String, required: true, trim: true },
+  phone: { type: String, trim: true },
+  url: { type: String, trim: true },
+  summary: { type: String, trim: true },
+  location: {
+    address: { type: String, trim: true },
+    postalCode: { type: String, trim: true },
+    city: { type: String, trim: true },
+    countryCode: { type: String, trim: true },
+    region: { type: String, trim: true },
   },
-  { _id: true }
-);
+  relExp: { type: String, trim: true },
+  totalExp: { type: String, trim: true },
+  objective: { type: String, trim: true },
+  profiles: [
+    {
+      network: { type: String, trim: true },
+      username: { type: String, trim: true },
+      url: { type: String, trim: true },
+    },
+  ],
+});
 
-const experienceSchema = new mongoose.Schema(
-  {
-    company: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    position: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    location: {
-      type: String,
-      trim: true,
-    },
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
-      default: null,
-    },
-    current: {
-      type: Boolean,
-      default: false,
-    },
-    employmentType: {
-      type: String,
-      enum: ['full-time', 'part-time', 'contract', 'internship', 'freelance'],
-      trim: true,
-    },
-    description: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 1000,
-    },
-    achievements: [
-      {
-        type: String,
-        trim: true,
-        maxlength: 200,
-      },
-    ],
-    projects: [{
-      type: String,
-      trim: true,
-      maxlength: 200,
-    }],
-    skillsUsed: [{
-      type: String,
-      trim: true,
-      maxlength: 50,
-    }],
-  },
-  { _id: true }
-);
+// Skills schema
+const skillsSchema = new mongoose.Schema({
+  languages: [{ name: String, level: Number }],
+  frameworks: [{ name: String, level: Number }],
+  technologies: [{ name: String, level: Number }],
+  libraries: [{ name: String, level: Number }],
+  databases: [{ name: String, level: Number }],
+  practices: [{ name: String, level: Number }],
+  tools: [{ name: String, level: Number }],
+});
 
-const contactSchema = new mongoose.Schema({
-  phone: {
-    type: String,
-    trim: true,
-  },
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: String,
-  },
-  linkedin: {
-    type: String,
-    trim: true,
-  },
-  website: {
-    type: String,
-    trim: true,
-  },
+// Work experience schema
+const workSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  name: { type: String, required: true, trim: true },
+  position: { type: String, required: true, trim: true },
+  url: { type: String, trim: true },
+  startDate: { type: String, required: true },
+  isWorkingHere: { type: Boolean, default: false },
+  endDate: { type: String },
+  highlights: [{ type: String, trim: true }],
+  summary: { type: String, trim: true },
+  years: { type: String, trim: true },
+});
+
+// Education schema
+const educationSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  institution: { type: String, required: true, trim: true },
+  url: { type: String, trim: true },
+  studyType: { type: String, required: true, trim: true },
+  area: { type: String, required: true, trim: true },
+  startDate: { type: String, required: true },
+  isStudyingHere: { type: Boolean, default: false },
+  endDate: { type: String },
+  score: { type: String, trim: true },
+  courses: [{ type: String, trim: true }],
+});
+
+// Activities schema
+const activitiesSchema = new mongoose.Schema({
+  involvements: { type: String, trim: true },
+  achievements: { type: String, trim: true },
+});
+
+// Volunteer experience schema
+const volunteerSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  organization: { type: String, required: true, trim: true },
+  position: { type: String, required: true, trim: true },
+  url: { type: String, trim: true },
+  startDate: { type: String, required: true },
+  endDate: { type: String },
+  summary: { type: String, trim: true },
+  highlights: [{ type: String, trim: true }],
+  isVolunteeringNow: { type: Boolean, default: false },
+});
+
+// Awards schema
+const awardsSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  title: { type: String, required: true, trim: true },
+  date: { type: String, required: true },
+  awarder: { type: String, required: true, trim: true },
+  summary: { type: String, trim: true },
 });
 
 const resumeSchema = new mongoose.Schema(
@@ -144,83 +105,32 @@ const resumeSchema = new mongoose.Schema(
     templateId: {
       type: String,
       required: true,
+      default: "modern",
     },
-    name: {
+    resumeName: {
       type: String,
       required: true,
       trim: true,
       maxlength: 100,
+      default: "My Resume",
     },
-    contact: {
-      type: contactSchema,
+    // AI Resume Builder compatible structure
+    basics: {
+      type: basicsSchema,
       required: true,
     },
-    education: [
-      {
-        type: educationSchema,
-      },
-    ],
-    skills: [
-      {
-        type: String,
-        trim: true,
-        maxlength: 50,
-      },
-    ],
-    experience: [
-      {
-        type: experienceSchema,
-      },
-    ],
-    summary: {
-      type: String,
-      trim: true,
-      maxlength: 500,
+    skills: {
+      type: skillsSchema,
+      required: true,
     },
-    languages: [
-      {
-        name: String,
-        proficiency: {
-          type: String,
-          enum: ["beginner", "intermediate", "advanced", "native"],
-          default: "intermediate",
-        },
-      },
-    ],
-    certifications: [
-      {
-        name: String,
-        issuer: String,
-        date: Date,
-        expiryDate: Date,
-        description: String,
-      },
-    ],
-    projects: [
-      {
-        name: String,
-        description: String,
-        technologies: [String],
-        link: String,
-        startDate: Date,
-        endDate: Date,
-      },
-    ],
-    awards: [{
-      type: String,
-      trim: true,
-      maxlength: 200,
-    }],
-    volunteer: [{
-      type: String,
-      trim: true,
-      maxlength: 200,
-    }],
-    hobbies: [{
-      type: String,
-      trim: true,
-      maxlength: 100,
-    }],
+    work: [workSchema],
+    education: [educationSchema],
+    activities: {
+      type: activitiesSchema,
+      default: {},
+    },
+    volunteer: [volunteerSchema],
+    awards: [awardsSchema],
     createdAt: {
       type: Date,
       default: Date.now,
@@ -246,23 +156,19 @@ resumeSchema.pre("save", function (next) {
   next();
 });
 
-// Method to get formatted resume data
+// Method to get formatted resume data compatible with AI Resume Builder
 resumeSchema.methods.getFormattedData = function () {
   return {
     id: this._id,
-    name: this.name,
+    resumeName: this.resumeName,
     templateId: this.templateId,
-    contact: this.contact,
-    education: this.education,
+    basics: this.basics,
     skills: this.skills,
-    experience: this.experience,
-    summary: this.summary,
-    languages: this.languages,
-    certifications: this.certifications,
-    projects: this.projects,
-    awards: this.awards,
+    work: this.work,
+    education: this.education,
+    activities: this.activities,
     volunteer: this.volunteer,
-    hobbies: this.hobbies,
+    awards: this.awards,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
   };
@@ -271,6 +177,51 @@ resumeSchema.methods.getFormattedData = function () {
 // Static method to find resumes by user
 resumeSchema.statics.findByUser = function (userId) {
   return this.find({ userId }).sort({ updatedAt: -1 });
+};
+
+// Method to create default resume structure
+resumeSchema.statics.createDefault = function (userId, userEmail, userName) {
+  return new this({
+    userId,
+    templateId: "modern",
+    resumeName: "My Resume",
+    basics: {
+      name: userName || "Your Name",
+      label: "Professional Title",
+      email: userEmail,
+      phone: "",
+      url: "",
+      summary: "",
+      location: {
+        address: "",
+        postalCode: "",
+        city: "",
+        countryCode: "",
+        region: "",
+      },
+      relExp: "",
+      totalExp: "",
+      objective: "",
+      profiles: [],
+    },
+    skills: {
+      languages: [],
+      frameworks: [],
+      technologies: [],
+      libraries: [],
+      databases: [],
+      practices: [],
+      tools: [],
+    },
+    work: [],
+    education: [],
+    activities: {
+      involvements: "",
+      achievements: "",
+    },
+    volunteer: [],
+    awards: [],
+  });
 };
 
 module.exports = mongoose.model("Resume", resumeSchema);

@@ -45,6 +45,16 @@ const validateContactForm = [
     .trim()
     .isLength({ max: 1000 })
     .withMessage("Message too long"),
+  body("education")
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage("Education qualification too long"),
+  body("readyToUpskill")
+    .optional()
+    .trim()
+    .isIn(["yes", "no", ""])
+    .withMessage("Invalid value for ready to upskill"),
 ];
 
 const validateNewsletterForm = [
@@ -101,6 +111,8 @@ router.post(
         message,
         preferredContact,
         courseInterest,
+        education,
+        readyToUpskill,
       } = req.body;
       const clientInfo = getClientInfo(req);
 
@@ -113,6 +125,8 @@ router.post(
         message,
         preferredContact,
         courseInterest,
+        education,
+        readyToUpskill,
         sourcePage: clientInfo.sourcePage,
       };
 

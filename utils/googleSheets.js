@@ -74,6 +74,8 @@ class GoogleSheetsService {
         "Message",
         "Preferred_Contact",
         "Course_Interest",
+        "Education",
+        "Ready_To_Upskill",
         "Source_Page",
       ],
       Newsletter_Subscriptions: [
@@ -131,6 +133,8 @@ class GoogleSheetsService {
         Message: data.message || "",
         Preferred_Contact: data.preferredContact || "",
         Course_Interest: data.courseInterest || "",
+        Education: data.education || "",
+        Ready_To_Upskill: data.readyToUpskill || "",
         Source_Page: data.sourcePage || "",
       };
 

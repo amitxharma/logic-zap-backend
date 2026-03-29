@@ -45,6 +45,8 @@ passport.use(
           name: profile.displayName,
         });
 
+        let isNewUser = false;
+
         // Check if user already exists
         let user = await User.findOne({ googleId: profile.id });
 
@@ -53,6 +55,8 @@ passport.use(
           // Update last login
           user.lastLogin = new Date();
           await user.save();
+          // This is a login, not a signup
+          user.isNewGoogleUser = false;
           return done(null, user);
         }
 
@@ -66,6 +70,8 @@ passport.use(
           user.name = user.name || profile.displayName;
           user.lastLogin = new Date();
           await user.save();
+          // This is linking, treat as login
+          user.isNewGoogleUser = false;
           return done(null, user);
         }
 
@@ -80,6 +86,8 @@ passport.use(
 
         await user.save();
         console.log("New Google user created successfully");
+        // This is a new signup
+        user.isNewGoogleUser = true;
         return done(null, user);
       } catch (error) {
         console.error("Google OAuth strategy error:", error);

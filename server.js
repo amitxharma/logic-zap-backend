@@ -10,6 +10,7 @@ const passport = require("./config/passport");
 const authRoutes = require("./routes/auth");
 const resumeRoutes = require("./routes/resume");
 const templateRoutes = require("./routes/templates");
+const formRoutes = require("./routes/forms");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,7 +31,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-  })
+  }),
 );
 
 // Body parsing middleware
@@ -56,11 +57,13 @@ mongoose
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/resume", resumeRoutes);
+app.use("/api/resumes", resumeRoutes);
 app.use("/api/templates", templateRoutes);
+app.use("/api/forms", formRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
+  console.log("Health check endpoint called");
   res.status(200).json({
     status: "OK",
     message: "Resume Builder Backend is running",
@@ -108,14 +111,14 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(
-    `JWT_SECRET: ${process.env.JWT_SECRET ? "✅ Loaded" : "❌ Missing"}`
+    `JWT_SECRET: ${process.env.JWT_SECRET ? "✅ Loaded" : "❌ Missing"}`,
   );
   console.log(
     `GOOGLE_CLIENT_ID: ${
       process.env.GOOGLE_CLIENT_ID ? "✅ Loaded" : "❌ Missing"
-    }`
+    }`,
   );
   console.log(
-    `MONGODB_URI: ${process.env.MONGODB_URI ? "✅ Loaded" : "❌ Missing"}`
+    `MONGODB_URI: ${process.env.MONGODB_URI ? "✅ Loaded" : "❌ Missing"}`,
   );
 });

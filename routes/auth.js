@@ -62,6 +62,25 @@ router.post("/signup", validateSignup, async (req, res) => {
 
     await user.save();
 
+    // Track signup activity in Google Sheets
+    try {
+      const googleSheetsService = require("../utils/googleSheets");
+
+      const authData = {
+        name: user.name || "",
+        email: user.email,
+        type: "signup",
+        ipAddress: req.ip || req.connection.remoteAddress || "",
+        userAgent: req.get("User-Agent") || "",
+      };
+
+      await googleSheetsService.addAuthSignup(authData);
+      console.log(`✅ Signup activity tracked for ${user.email}`);
+    } catch (trackingError) {
+      console.error("❌ Failed to track signup activity:", trackingError);
+      // Don't fail the signup if tracking fails
+    }
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -131,6 +150,25 @@ router.post("/login", validateLogin, async (req, res) => {
     // Update last login
     await user.updateLastLogin();
 
+    // Track login activity in Google Sheets
+    try {
+      const googleSheetsService = require("../utils/googleSheets");
+
+      const authData = {
+        name: user.name || "",
+        email: user.email,
+        type: "login",
+        ipAddress: req.ip || req.connection.remoteAddress || "",
+        userAgent: req.get("User-Agent") || "",
+      };
+
+      await googleSheetsService.addAuthSignup(authData);
+      console.log(`✅ Login activity tracked for ${user.email}`);
+    } catch (trackingError) {
+      console.error("❌ Failed to track login activity:", trackingError);
+      // Don't fail the login if tracking fails
+    }
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -184,6 +222,33 @@ router.get(
             process.env.FRONTEND_URL || "http://localhost:3000"
           }/auth/callback?error=no_user_found`
         );
+      }
+
+      // Track Google OAuth activity in Google Sheets
+      try {
+        const googleSheetsService = require("../utils/googleSheets");
+
+        // Use the flag set in passport strategy
+        const isNewUser = user.isNewGoogleUser === true;
+
+        const authData = {
+          name: user.name || "",
+          email: user.email,
+          type: isNewUser ? "google_signup" : "google_login",
+          ipAddress: req.ip || req.connection.remoteAddress || "",
+          userAgent: req.get("User-Agent") || "",
+        };
+
+        await googleSheetsService.addAuthSignup(authData);
+        console.log(
+          `✅ Google OAuth activity tracked: ${authData.type} for ${user.email}`
+        );
+      } catch (trackingError) {
+        console.error(
+          "❌ Failed to track Google OAuth activity:",
+          trackingError
+        );
+        // Don't fail the login if tracking fails
       }
 
       // Generate token

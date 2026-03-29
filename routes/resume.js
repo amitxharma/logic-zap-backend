@@ -3,30 +3,43 @@ const { body, validationResult } = require("express-validator");
 const { auth } = require("../middleware/auth");
 const Resume = require("../models/Resume");
 const User = require("../models/User");
-const { generatePDF } = require("../utils/pdfGenerator");
 
 const router = express.Router();
 
-// Validation middleware
+// Validation middleware for AI Resume Builder structure
 const validateResume = [
-  body("name").notEmpty().trim().withMessage("Resume name is required"),
-  body("templateId").notEmpty().withMessage("Template ID is required"),
-  body("contact").isObject().withMessage("Contact information is required"),
-  body("contact.phone").optional().isString(),
-  body("contact.address").optional().isObject(),
-  body("education").isArray().withMessage("Education must be an array"),
-  body("education.*.gpa")
+  body("resumeName")
     .optional()
-    .isFloat({ min: 0, max: 4.0 })
-    .withMessage("GPA must be a number between 0.0 and 4.0"),
-  body("skills").isArray().withMessage("Skills must be an array"),
-  body("experience").isArray().withMessage("Experience must be an array"),
+    .isString()
+    .trim()
+    .withMessage("Resume name must be a string"),
+  body("templateId")
+    .optional()
+    .isString()
+    .withMessage("Template ID must be a string"),
+  body("basics").optional().isObject().withMessage("Basics must be an object"),
+  body("basics.name")
+    .optional()
+    .isString()
+    .trim()
+    .withMessage("Name must be a string"),
+  body("basics.email").optional().isEmail().withMessage("Email must be valid"),
+  body("skills").optional().isObject().withMessage("Skills must be an object"),
+  body("work").optional().isArray().withMessage("Work must be an array"),
+  body("education")
+    .optional()
+    .isArray()
+    .withMessage("Education must be an array"),
+  body("volunteer")
+    .optional()
+    .isArray()
+    .withMessage("Volunteer must be an array"),
+  body("awards").optional().isArray().withMessage("Awards must be an array"),
 ];
 
 // Create new resume
 router.post("/", auth, validateResume, async (req, res) => {
   try {
-    // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -36,23 +49,33 @@ router.post("/", auth, validateResume, async (req, res) => {
       });
     }
 
-    const resumeData = {
-      ...req.body,
-      userId: req.user._id,
-    };
+    // Create resume with default structure if no data provided
+    let resumeData;
+    if (Object.keys(req.body).length === 0) {
+      // Create default resume
+      resumeData = Resume.createDefault(
+        req.user._id,
+        req.user.email,
+        req.user.name
+      );
+    } else {
+      resumeData = new Resume({
+        ...req.body,
+        userId: req.user._id,
+      });
+    }
 
-    const resume = new Resume(resumeData);
-    await resume.save();
+    await resumeData.save();
 
     // Add resume to user's resumes array
-    req.user.resumes.push(resume._id);
+    req.user.resumes.push(resumeData._id);
     await req.user.save();
 
     res.status(201).json({
       success: true,
       message: "Resume created successfully",
       data: {
-        resume: resume.getFormattedData(),
+        resume: resumeData.getFormattedData(),
       },
     });
   } catch (error) {
@@ -130,7 +153,6 @@ router.get("/:id", auth, async (req, res) => {
 // Update resume
 router.put("/:id", auth, validateResume, async (req, res) => {
   try {
-    // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -140,12 +162,14 @@ router.put("/:id", auth, validateResume, async (req, res) => {
       });
     }
 
+    const updateData = { ...req.body, updatedAt: new Date() };
+
     const resume = await Resume.findOneAndUpdate(
       {
         _id: req.params.id,
         userId: req.user._id,
       },
-      { ...req.body, updatedAt: new Date() },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -235,7 +259,7 @@ router.post("/:id/duplicate", auth, async (req, res) => {
     delete duplicateData.createdAt;
     delete duplicateData.updatedAt;
 
-    duplicateData.name = `${duplicateData.name} (Copy)`;
+    duplicateData.resumeName = `${duplicateData.resumeName} (Copy)`;
     duplicateData.userId = req.user._id;
 
     const duplicatedResume = new Resume(duplicateData);
@@ -265,65 +289,6 @@ router.post("/:id/duplicate", auth, async (req, res) => {
   }
 });
 
-// Download resume as PDF
-router.get("/:id/download", auth, async (req, res) => {
-  try {
-    const resume = await Resume.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    }).populate("userId", "name email");
-
-    if (!resume) {
-      return res.status(404).json({
-        success: false,
-        message: "Resume not found",
-      });
-    }
-
-    // Ensure contact has email from user if not present
-    const resumeData = resume.toObject();
-    if (!resumeData.contact) {
-      resumeData.contact = {};
-    }
-    if (!resumeData.contact.email && resume.userId && resume.userId.email) {
-      resumeData.contact.email = resume.userId.email;
-    }
-    if (!resumeData.contact.name && resume.userId && resume.userId.name) {
-      resumeData.contact.name = resume.userId.name;
-    }
-
-    // Generate PDF
-    const pdfBuffer = await generatePDF(resumeData);
-
-    // Ensure pdfBuffer is a proper Buffer
-    const buffer = Buffer.isBuffer(pdfBuffer)
-      ? pdfBuffer
-      : Buffer.from(pdfBuffer);
-
-    // Set response headers for file download
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${resume.name.replace(/\s+/g, "_")}.pdf"`
-    );
-    res.setHeader("Content-Length", buffer.length);
-
-    // Send the PDF buffer properly
-    res.end(buffer);
-  } catch (error) {
-    console.error("Download resume error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error generating PDF",
-      error:
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : "Internal server error",
-    });
-  }
-});
-
 // Get resume statistics
 router.get("/stats/overview", auth, async (req, res) => {
   try {
@@ -331,7 +296,7 @@ router.get("/stats/overview", auth, async (req, res) => {
     const recentResumes = await Resume.find({ userId: req.user._id })
       .sort({ updatedAt: -1 })
       .limit(5)
-      .select("name updatedAt templateId");
+      .select("resumeName updatedAt templateId");
 
     res.json({
       success: true,
@@ -339,7 +304,7 @@ router.get("/stats/overview", auth, async (req, res) => {
         totalResumes,
         recentResumes: recentResumes.map((resume) => ({
           id: resume._id,
-          name: resume.name,
+          name: resume.resumeName,
           updatedAt: resume.updatedAt,
           templateId: resume.templateId,
         })),

@@ -26,7 +26,7 @@ class GoogleSheetsService {
       console.log("✅ Environment variables found");
       console.log(
         "📧 Service Account Email:",
-        process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+        process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
       );
       console.log("📄 Sheet ID:", process.env.GOOGLE_SHEET_ID);
 
@@ -45,7 +45,7 @@ class GoogleSheetsService {
       // Initialize the sheet
       this.doc = new GoogleSpreadsheet(
         process.env.GOOGLE_SHEET_ID,
-        this.serviceAccountAuth
+        this.serviceAccountAuth,
       );
 
       console.log("🔄 Loading spreadsheet info...");
@@ -184,13 +184,36 @@ class GoogleSheetsService {
 
   async addAuthSignup(data) {
     try {
+      // GUARD: Only allow 'signup' type - reject 'login' or 'google_login'
+      const type = data.type || "signup";
+      if (type === "login" || type === "google_login") {
+        console.log(
+          `Rejected ${type} event - Auth_Signups sheet is for signups only`,
+        );
+        return { success: false, message: "Only signup events are allowed" };
+      }
+
       const sheet = await this.ensureSheetExists("Auth_Signups");
+      const email = data.email || "";
+
+      // DEDUPLICATION: Check if email already exists with type 'signup'
+      if (email) {
+        const rows = await sheet.getRows();
+        const existingSignup = rows.find(
+          (row) => row.get("Email") === email && row.get("Type") === "signup",
+        );
+
+        if (existingSignup) {
+          console.log(`Duplicate signup prevented for email: ${email}`);
+          return { success: false, message: "Email already registered" };
+        }
+      }
 
       const rowData = {
         Timestamp: new Date().toISOString(),
         Name: data.name || "",
-        Email: data.email || "",
-        Type: data.type || "signup", // 'signup' or 'login'
+        Email: email,
+        Type: type,
         IP_Address: data.ipAddress || "",
         User_Agent: data.userAgent || "",
       };
@@ -461,11 +484,11 @@ class GoogleSheetsService {
       if (actualModalId && modalSheetMapping[actualModalId]) {
         sheetName = modalSheetMapping[actualModalId];
         console.log(
-          `📊 Routing to sheet: ${sheetName} (from modalId: ${actualModalId})`
+          `📊 Routing to sheet: ${sheetName} (from modalId: ${actualModalId})`,
         );
       } else {
         console.log(
-          `⚠️  No mapping found for modalId: ${actualModalId}, using default: ${sheetName}`
+          `⚠️  No mapping found for modalId: ${actualModalId}, using default: ${sheetName}`,
         );
       }
 
@@ -530,7 +553,7 @@ class GoogleSheetsService {
       await sheet.addRow(rowData);
 
       console.log(
-        `✅ SUCCESS! Form submitted to sheet: ${sheetName} | Modal ID: ${actualModalId}`
+        `✅ SUCCESS! Form submitted to sheet: ${sheetName} | Modal ID: ${actualModalId}`,
       );
       return { success: true, sheetName, modalId: actualModalId };
     } catch (error) {
@@ -561,13 +584,13 @@ class GoogleSheetsService {
       console.log(
         `${
           isBlogPage ? "Blog" : "Newsletter"
-        } subscription added to Google Sheets (${sheetName})`
+        } subscription added to Google Sheets (${sheetName})`,
       );
       return { success: true };
     } catch (error) {
       console.error(
         "Error adding newsletter subscription to Google Sheets:",
-        error
+        error,
       );
       throw error;
     }
@@ -592,7 +615,7 @@ class GoogleSheetsService {
     } catch (error) {
       console.error(
         "Error adding resume builder activity to Google Sheets:",
-        error
+        error,
       );
       throw error;
     }
@@ -620,7 +643,7 @@ class GoogleSheetsService {
     } catch (error) {
       console.error(
         "❌ Error adding mentor application to Google Sheets:",
-        error
+        error,
       );
       throw error;
     }
@@ -672,6 +695,88 @@ class GoogleSheetsService {
       return rows.map((row) => row.toObject());
     } catch (error) {
       console.error(`Error getting data from sheet ${sheetTitle}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * ONE-TIME CLEANUP UTILITY
+   * Cleans up the Auth_Signups sheet by:
+   * 1. Removing all rows where Type is 'login' or 'google_login'
+   * 2. Removing duplicate signups, keeping only the earliest timestamp for each email
+   *
+   * Usage: Call this function manually via a script or API endpoint
+   */
+  async cleanupAuthSignupsSheet() {
+    try {
+      console.log("🧹 Starting Auth_Signups sheet cleanup...");
+      const sheet = await this.ensureSheetExists("Auth_Signups");
+      const rows = await sheet.getRows();
+
+      let deletedLogins = 0;
+      let deletedDuplicates = 0;
+      const seenEmails = new Map(); // email -> { row, timestamp }
+
+      // First pass: Delete all login entries
+      for (const row of rows) {
+        const type = row.get("Type");
+        if (type === "login" || type === "google_login") {
+          await row.delete();
+          deletedLogins++;
+          console.log(`Deleted ${type} entry`);
+        }
+      }
+
+      // Refresh rows after deletion
+      const remainingRows = await sheet.getRows();
+
+      // Second pass: Handle duplicates - keep earliest timestamp
+      for (const row of remainingRows) {
+        const email = row.get("Email");
+        const timestamp = row.get("Timestamp");
+        const type = row.get("Type");
+
+        if (type === "signup" && email) {
+          if (seenEmails.has(email)) {
+            const existing = seenEmails.get(email);
+            const existingTime = new Date(existing.timestamp);
+            const currentTime = new Date(timestamp);
+
+            // Keep the earlier entry, delete the later one
+            if (currentTime < existingTime) {
+              // Current is earlier, delete the existing one
+              await existing.row.delete();
+              seenEmails.set(email, { row, timestamp });
+              deletedDuplicates++;
+              console.log(
+                `Deleted duplicate signup for ${email} (kept earlier entry)`,
+              );
+            } else {
+              // Existing is earlier, delete current
+              await row.delete();
+              deletedDuplicates++;
+              console.log(
+                `Deleted duplicate signup for ${email} (kept earlier entry)`,
+              );
+            }
+          } else {
+            seenEmails.set(email, { row, timestamp });
+          }
+        }
+      }
+
+      const summary = {
+        success: true,
+        deletedLogins,
+        deletedDuplicates,
+        totalDeleted: deletedLogins + deletedDuplicates,
+        remainingSignups: seenEmails.size,
+      };
+
+      console.log("✅ Cleanup completed:", summary);
+      return summary;
+    } catch (error) {
+      console.error("❌ Error during Auth_Signups cleanup:", error);
       throw error;
     }
   }

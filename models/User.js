@@ -27,9 +27,8 @@ const userSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: function () {
-        return this.googleId; // Name is required for Google users
-      },
+      required: false, // Name is optional but recommended
+      trim: true,
     },
     experienceLevel: {
       type: String,
@@ -72,7 +71,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Index for better query performance

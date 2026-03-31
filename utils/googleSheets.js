@@ -8,6 +8,23 @@ class GoogleSheetsService {
     this.isInitialized = false;
     this.initializationPromise = null; // Track ongoing initialization
   }
+  // Helper method to get IST timestamp in format: YYYY-MM-DD HH:MM:SS
+  getISTTimestamp() {
+    const date = new Date();
+    // Convert to IST (UTC+5:30)
+    const istDate = new Date(
+      date.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+    );
+
+    const year = istDate.getFullYear();
+    const month = String(istDate.getMonth() + 1).padStart(2, "0");
+    const day = String(istDate.getDate()).padStart(2, "0");
+    const hours = String(istDate.getHours()).padStart(2, "0");
+    const minutes = String(istDate.getMinutes()).padStart(2, "0");
+    const seconds = String(istDate.getSeconds()).padStart(2, "0");
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
 
   async initialize() {
     // If already initialized, return immediately
@@ -233,7 +250,7 @@ class GoogleSheetsService {
       }
 
       const rowData = {
-        Timestamp: new Date().toISOString(),
+        Timestamp: this.getISTTimestamp(),
         Name: data.name || "",
         Email: email,
         Type: type,
@@ -525,7 +542,7 @@ class GoogleSheetsService {
       if (sheetName === "Contact_Forms") {
         // Contact Forms sheet with all fields
         rowData = {
-          Timestamp: new Date().toISOString(),
+          Timestamp: this.getISTTimestamp(),
           Name: data.name || "",
           Email: data.email || "",
           Phone: data.phone || "",
@@ -545,7 +562,7 @@ class GoogleSheetsService {
       } else if (sheetName === "Extras") {
         // Extras sheet for Placements, Blog, Contact pages
         rowData = {
-          Timestamp: new Date().toISOString(),
+          Timestamp: this.getISTTimestamp(),
           Name: data.name || "",
           Email: data.email || "",
           Phone: data.phone || "",
@@ -559,7 +576,7 @@ class GoogleSheetsService {
       } else {
         // Dynamic modal sheets with clean, organized fields
         rowData = {
-          Timestamp: new Date().toISOString(),
+          Timestamp: this.getISTTimestamp(),
           Name: data.name || "",
           Email: data.email || "",
           Phone: data.phone || "",
@@ -597,7 +614,7 @@ class GoogleSheetsService {
       const sheet = await this.ensureSheetExists(sheetName);
 
       const rowData = {
-        Timestamp: new Date().toISOString(),
+        Timestamp: this.getISTTimestamp(),
         Email: data.email || "",
         Source_Page: data.sourcePage || "",
         IP_Address: data.ipAddress || "",
@@ -624,7 +641,7 @@ class GoogleSheetsService {
       const sheet = await this.ensureSheetExists("Resume_Builder_Users");
 
       const rowData = {
-        Timestamp: new Date().toISOString(),
+        Timestamp: this.getISTTimestamp(),
         Name: data.name || "",
         Email: data.email || "",
         Resume_ID: data.resumeId || "",
@@ -650,7 +667,7 @@ class GoogleSheetsService {
       const sheet = await this.ensureSheetExists("Mentor_Applications");
 
       const rowData = {
-        Timestamp: new Date().toISOString(),
+        Timestamp: this.getISTTimestamp(),
         Name: data.name || "",
         Email: data.email || "",
         Phone: data.phone || "",
@@ -678,7 +695,7 @@ class GoogleSheetsService {
       const sheet = await this.ensureSheetExists("Mentor_Booking");
 
       const rowData = {
-        Timestamp: new Date().toISOString(),
+        Timestamp: this.getISTTimestamp(),
         Name: data.name || "",
         Email: data.email || "",
         Phone: data.phone || "",

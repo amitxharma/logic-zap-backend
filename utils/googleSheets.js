@@ -6,9 +6,32 @@ class GoogleSheetsService {
     this.doc = null;
     this.serviceAccountAuth = null;
     this.isInitialized = false;
+    this.initializationPromise = null; // Track ongoing initialization
   }
 
   async initialize() {
+    // If already initialized, return immediately
+    if (this.isInitialized) {
+      return;
+    }
+
+    // If initialization is in progress, wait for it to complete
+    if (this.initializationPromise) {
+      console.log("⏳ Waiting for ongoing initialization...");
+      return this.initializationPromise;
+    }
+
+    // Start new initialization
+    this.initializationPromise = this._performInitialization();
+
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+
+  async _performInitialization() {
     try {
       console.log("🔄 Initializing Google Sheets service...");
 
